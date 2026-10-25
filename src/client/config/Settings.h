@@ -7,8 +7,6 @@
 
 namespace shoulder::config {
 
-inline constexpr const char* kConfigPath = "C:\\Users\\Public\\ShoulderSurfing.cfg";
-
 struct Settings {
     bool enabled = true;
     bool leftShoulder = false;

@@ -26,9 +26,18 @@ void LogF(const char* format, ...) {
                                 time.wHour, time.wMinute, time.wSecond, message);
     if (length <= 0) return;
 
+    static wchar_t path[MAX_PATH] = {};
+    if (!path[0]) {
+        wchar_t temp[MAX_PATH] = {};
+        const DWORD n = GetTempPathW(MAX_PATH, temp);
+        if (n == 0 || n >= MAX_PATH - 40) return;
+        wcscpy_s(path, temp);
+        wcscat_s(path, L"shoulder-surfing-reloaded.log");
+    }
+
     HANDLE file = INVALID_HANDLE_VALUE;
     for (int attempt = 0; attempt < 5; ++attempt) {
-        file = CreateFileA(kLogPath, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
+        file = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
                            nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
         if (file != INVALID_HANDLE_VALUE) break;
         Sleep(1);

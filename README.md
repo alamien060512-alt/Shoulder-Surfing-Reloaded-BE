@@ -1,16 +1,22 @@
 # Shoulder Surfing Reloaded (Bedrock)
 
-An over-the-shoulder, RPG-style third-person camera for **Minecraft: Bedrock Edition (Windows)**, inspired by the Java mod [Shoulder Surfing Reloaded](https://www.curseforge.com/minecraft/mc-mods/shoulder-surfing-reloaded). It is a native DLL (same injected-DLL + MinHook model as Midnight Client) that nudges the game's third-person render camera sideways, up and back, and turns it slightly so the crosshair still lands where the player aims.
+An over-the-shoulder, RPG-style third-person camera for **Minecraft: Bedrock Edition (Windows)**, inspired by the Java mod [Shoulder Surfing Reloaded](https://www.curseforge.com/minecraft/mc-mods/shoulder-surfing-reloaded). It is a native mod DLL (MinHook, structured like Midnight Client) that nudges the game's third-person render camera sideways, up and back, and turns it slightly so the crosshair still lands where the player aims.
 
 > [!WARNING]
 > **Experimental.** Bedrock has no mod API, so this hooks game internals by address. The built-in profile targets **Minecraft 1.26.52.3 only**; on any other build the hook refuses to install and the game is left untouched. The camera write path has been unit-tested for math, but not validated in a live game by the author — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#validation-status). Not affiliated with Mojang or Microsoft. Do not use on servers that prohibit client modifications.
 
-## Use
+## Install (mods folder, no injector)
 
-1. Download `ShoulderSurfing.dll` and `Injector.exe` from the Actions artifacts / Releases (or [build it](#build)).
-2. Start Minecraft Bedrock for Windows (1.26.52.3), join a world.
-3. Run `Injector.exe` (add the DLL path as an argument if it is not beside the exe).
-4. Switch the game to **back third person** (the in-game perspective key); the shoulder offset applies there.
+Works like [vibrant-visuals-patcher](https://github.com/th4llium/vibrant-visuals-patcher): a DLL in the mods folder, loaded by [QYCottage/ModLoader](https://github.com/QYCottage/ModLoader) (`WINHTTP.dll`).
+
+1. Install ModLoader. Easiest: run `VibrantVisualPatcherInstaller.exe` from the vibrant-visuals-patcher releases once (it installs ModLoader), or install ModLoader by hand.
+2. Download `shoulder-surfing-reloaded.dll` from this repo's Actions run / Releases.
+3. Copy it to **both** mods folders, same as the patcher:
+   - `%APPDATA%\Minecraft Bedrock\mods`
+   - the game's `mods` folder (e.g. `C:\XboxGames\Minecraft for Windows\Content\mods` or `C:\Program Files\WindowsApps\Microsoft.MinecraftUWP_...\mods`)
+4. Start Minecraft (1.26.52.3), join a world, switch to **back third person**.
+
+It should coexist with vibrant-visuals-patcher and BetterRenderDragon (it only hooks the world camera render call).
 
 | Key (while Minecraft is focused) | Action |
 | --- | --- |
@@ -18,7 +24,7 @@ An over-the-shoulder, RPG-style third-person camera for **Minecraft: Bedrock Edi
 | `F7` | Swap left/right shoulder |
 | `F9` | Unload the DLL (game keeps running) |
 
-Settings live in `C:\Users\Public\ShoulderSurfing.cfg` (created on first run, hot-reloaded when saved):
+Settings: `%APPDATA%\Minecraft Bedrock\mods\shoulder-surfing-reloaded.cfg` (created on first run, hot-reloaded when saved):
 
 ```ini
 enabled=1
@@ -35,7 +41,11 @@ swap_key=0x76
 unload_key=0x78
 ```
 
-Log: `C:\Users\Public\ShoulderSurfing.log` (look for `[camera] frames=… applied=… overwritten=…`).
+Log: `%TEMP%\shoulder-surfing-reloaded.log` (look for `[camera] frames=... applied=... overwritten=...`).
+
+### Antivirus warnings
+
+The DLL is unsigned and hooks game code, so some scanners may still flag it. This project ships **no injector** (no remote threads, no process injection) and releases are built by MSVC in public CI; compare the `SHA256.txt` in the artifact with your file, or build it yourself.
 
 ## Build
 
@@ -55,7 +65,7 @@ cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake -DCMAKE_
 cmake --build build
 ```
 
-Outputs: `ShoulderSurfing.dll`, `Injector.exe`.
+Output: `shoulder-surfing-reloaded.dll` (use the MSVC build for releases; the MinGW build is a CI compile check).
 
 ## Not included (yet)
 

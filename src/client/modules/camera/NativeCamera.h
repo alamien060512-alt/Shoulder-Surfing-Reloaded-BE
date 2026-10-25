@@ -27,7 +27,8 @@ struct Diagnostics {
 
 // Validates the binary profile and creates (does not enable) the hook.
 // Returns false and leaves the game untouched on any mismatch.
-bool CreateNativeCameraHook();
+// `quiet` suppresses the mismatch log so callers can poll while the game boots.
+bool CreateNativeCameraHook(bool quiet = false);
 bool IsNativeCameraHookAvailable();
 
 void PublishControls(const Controls& controls);

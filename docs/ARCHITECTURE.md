@@ -4,12 +4,11 @@ Mirrors the Midnight Client module layout: `core` → `config` → `modules/*` �
 
 ```
 src/client/ShoulderSurfing.cpp          DllMain, worker thread, hotkeys, config hot-reload, unload
-src/client/core/Logging.*               C:\Users\Public\ShoulderSurfing.log
+src/client/core/Logging.*               %TEMP%\shoulder-surfing-reloaded.log
 src/client/config/Settings.*            key=value parsing/clamping (pure, tested)
 src/client/modules/camera/CameraMath.*  matrix math (pure, tested)
 src/client/modules/camera/NativeCamera.* render hook (version-gated)
 src/client/modules/camera/ViewSettings.* reads game_thirdperson from options.txt
-src/launcher/Injector.cpp               LoadLibraryW CLI injector
 ```
 
 ## How the camera works
@@ -25,7 +24,7 @@ Offsets ease with `1 − e^(−rate·dt)` smoothing; they are scaled by `nativeD
 
 ## Safety
 
-- Binary profile check (function prologue + virtual-table slot) before hooking; mismatch ⇒ DLL unloads itself.
+- Loaded by ModLoader at process start; the worker retries the binary profile check (function prologue + virtual-table slot) for up to 60 s, then gives up without touching the game.
 - All memory access is through `ReadProcessMemory`/`WriteProcessMemory` on the current process (no faults).
 - Unload drains in-flight hook calls before `MH_Uninitialize`.
 

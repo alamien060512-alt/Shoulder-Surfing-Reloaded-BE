@@ -176,14 +176,14 @@ bool BytesMatch(Address at, const unsigned char* expected, std::size_t length) {
 }
 }  // namespace
 
-bool CreateNativeCameraHook() {
+bool CreateNativeCameraHook(bool quiet) {
     const Address base = reinterpret_cast<Address>(GetModuleHandleW(nullptr));
     constexpr unsigned char prologue[] = {0x55, 0x41, 0x57, 0x41, 0x56, 0x41, 0x55, 0x41, 0x54, 0x56, 0x57, 0x53,
         0x48, 0x81, 0xEC, 0x98, 0x0C, 0, 0, 0x48, 0x8D, 0xAC, 0x24, 0x80, 0, 0, 0, 0x44, 0x0F, 0x29, 0xA5, 0};
     Address slot = 0;
     if (!base || !BytesMatch(base + kRenderRva, prologue, sizeof(prologue)) ||
         !Read(base + kRenderVirtualSlotRva, slot) || slot != base + kRenderRva) {
-        LogF("[camera] binary profile mismatch (expected Minecraft 1.26.52.3); hook not installed");
+        if (!quiet) LogF("[camera] binary profile mismatch (expected Minecraft 1.26.52.3); hook not installed");
         return false;
     }
     const auto status = MH_CreateHook(reinterpret_cast<void*>(base + kRenderRva),

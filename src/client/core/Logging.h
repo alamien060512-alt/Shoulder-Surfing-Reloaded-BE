@@ -3,8 +3,7 @@
 
 namespace shoulder {
 
-inline constexpr const char* kLogPath = "C:\\Users\\Public\\ShoulderSurfing.log";
-
+// Writes to %TEMP%\\shoulder-surfing-reloaded.log
 void LogF(const char* format, ...);
 
 }  // namespace shoulder

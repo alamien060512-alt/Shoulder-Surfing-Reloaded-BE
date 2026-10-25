@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(ShoulderSurfingBE LANGUAGES C CXX)
 
+# Static CRT: the DLL is loaded into Minecraft by ModLoader and must not depend on a VC++ redistributable.
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+endif()
+
 include(CTest)
 
 if(NOT WIN32)
@@ -41,15 +46,7 @@ add_library(ShoulderSurfing SHARED
 )
 target_include_directories(ShoulderSurfing PRIVATE "${SHOULDER_SOURCE_DIR}")
 target_link_libraries(ShoulderSurfing PRIVATE shoulder_core shoulder_minhook)
-set_target_properties(ShoulderSurfing PROPERTIES OUTPUT_NAME "ShoulderSurfing" PREFIX "")
-
-add_executable(Injector src/launcher/Injector.cpp)
-set_target_properties(Injector PROPERTIES OUTPUT_NAME "Injector")
-if(MSVC)
-    target_compile_definitions(Injector PRIVATE UNICODE _UNICODE)
-else()
-    target_link_options(Injector PRIVATE -municode)
-endif()
+set_target_properties(ShoulderSurfing PROPERTIES OUTPUT_NAME "shoulder-surfing-reloaded" PREFIX "")
 
 if(MSVC)
     target_compile_options(ShoulderSurfing PRIVATE /W4 /permissive-)
@@ -57,7 +54,6 @@ else()
     target_compile_options(ShoulderSurfing PRIVATE -Wall -Wextra)
     # Self-contained DLL: no libstdc++/libgcc DLLs next to Minecraft.
     target_link_options(ShoulderSurfing PRIVATE -static -static-libgcc -static-libstdc++)
-    target_link_options(Injector PRIVATE -static -static-libgcc -static-libstdc++)
 endif()
 
 if(BUILD_TESTING)

@@ -11,6 +11,7 @@
 #include "client/modules/camera/ViewSettings.h"
 
 #include <atomic>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -19,15 +20,34 @@ namespace {
 HMODULE gModule = nullptr;
 std::atomic<bool> gUnloadRequested{false};
 
-std::string ReadFile(const char* path) {
-    std::ifstream in(path, std::ios::binary);
+// Config lives beside the other mods: %APPDATA%\\Minecraft Bedrock\\mods\\shoulder-surfing-reloaded.cfg
+// (falls back to %TEMP% when that folder cannot be created).
+const std::wstring& ConfigPath() {
+    static const std::wstring path = [] {
+        wchar_t base[MAX_PATH] = {};
+        if (GetEnvironmentVariableW(L"APPDATA", base, MAX_PATH) > 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
+            std::wstring dir = std::wstring(base) + L"\\Minecraft Bedrock\\mods";
+            CreateDirectoryW((std::wstring(base) + L"\\Minecraft Bedrock").c_str(), nullptr);
+            CreateDirectoryW(dir.c_str(), nullptr);
+            if (GetFileAttributesW(dir.c_str()) != INVALID_FILE_ATTRIBUTES)
+                return dir + L"\\shoulder-surfing-reloaded.cfg";
+        }
+        wchar_t temp[MAX_PATH] = {};
+        GetTempPathW(MAX_PATH, temp);
+        return std::wstring(temp) + L"shoulder-surfing-reloaded.cfg";
+    }();
+    return path;
+}
+
+std::string ReadFile(const std::wstring& path) {
+    std::ifstream in(std::filesystem::path(path), std::ios::binary);
     std::ostringstream ss;
     ss << in.rdbuf();
     return ss.str();
 }
 
-void WriteFile(const char* path, const std::string& text) {
-    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+void WriteFile(const std::wstring& path, const std::string& text) {
+    std::ofstream out(std::filesystem::path(path), std::ios::binary | std::ios::trunc);
     out << text;
 }
 
@@ -54,26 +74,33 @@ DWORD WINAPI Worker(LPVOID) {
 
     if (MH_Initialize() != MH_OK) {
         LogF("MinHook init failed");
-        FreeLibraryAndExitThread(gModule, 1);
+        return 1;
     }
-    if (!camera::CreateNativeCameraHook()) {
+    // Loaded by ModLoader at process start: wait for the game image to settle.
+    bool hooked = false;
+    for (int attempt = 0; attempt < 60 && !hooked; ++attempt) {
+        hooked = camera::CreateNativeCameraHook(/*quiet=*/attempt + 1 < 60);
+        if (!hooked) Sleep(1000);
+    }
+    if (!hooked) {
+        LogF("Unsupported Minecraft build; shoulder camera stays disabled (game untouched)");
         MH_Uninitialize();
-        FreeLibraryAndExitThread(gModule, 2);
+        return 2;
     }
     if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK) {
         LogF("MH_EnableHook failed");
         camera::DrainNativeCamera();
         MH_Uninitialize();
-        FreeLibraryAndExitThread(gModule, 3);
+        return 3;
     }
 
-    const std::string existing = ReadFile(config::kConfigPath);
+    const std::string existing = ReadFile(ConfigPath());
     config::Settings settings = config::Parse(existing);
-    if (existing.empty()) WriteFile(config::kConfigPath, config::Serialize(settings));
+    if (existing.empty()) WriteFile(ConfigPath(), config::Serialize(settings));
     FILETIME lastWrite{};
     auto stamp = [&] {
         WIN32_FILE_ATTRIBUTE_DATA data{};
-        if (GetFileAttributesExA(config::kConfigPath, GetFileExInfoStandard, &data)) lastWrite = data.ftLastWriteTime;
+        if (GetFileAttributesExW(ConfigPath().c_str(), GetFileExInfoStandard, &data)) lastWrite = data.ftLastWriteTime;
     };
     stamp();
 
@@ -92,7 +119,7 @@ DWORD WINAPI Worker(LPVOID) {
         camera::PublishControls(c);
     };
     publish();
-    LogF("Ready. F6 toggle, F7 swap shoulder, F9 unload (see %s)", config::kConfigPath);
+    LogF("Ready. F6 toggle, F7 swap shoulder, F9 unload");
 
     while (!gUnloadRequested.load()) {
         Sleep(16);
@@ -111,10 +138,10 @@ DWORD WINAPI Worker(LPVOID) {
         if (now - lastConfigPoll > 1000) {
             lastConfigPoll = now;
             WIN32_FILE_ATTRIBUTE_DATA data{};
-            if (GetFileAttributesExA(config::kConfigPath, GetFileExInfoStandard, &data) &&
+            if (GetFileAttributesExW(ConfigPath().c_str(), GetFileExInfoStandard, &data) &&
                 CompareFileTime(&data.ftLastWriteTime, &lastWrite) != 0) {
                 lastWrite = data.ftLastWriteTime;
-                settings = config::Parse(ReadFile(config::kConfigPath));
+                settings = config::Parse(ReadFile(ConfigPath()));
                 changed = true;
                 LogF("config reloaded");
             }
@@ -122,7 +149,7 @@ DWORD WINAPI Worker(LPVOID) {
         if (dirty && now - lastSave > 1000) {   // persist hotkey changes, debounced
             lastSave = now;
             dirty = false;
-            WriteFile(config::kConfigPath, config::Serialize(settings));
+            WriteFile(ConfigPath(), config::Serialize(settings));
             stamp();
         }
         if (changed) publish();
@@ -136,7 +163,7 @@ DWORD WINAPI Worker(LPVOID) {
     }
 
     LogF("Unloading");
-    if (dirty) WriteFile(config::kConfigPath, config::Serialize(settings));
+    if (dirty) WriteFile(ConfigPath(), config::Serialize(settings));
     MH_DisableHook(MH_ALL_HOOKS);
     camera::DrainNativeCamera();
     Sleep(150);   // let threads already inside the trampoline return

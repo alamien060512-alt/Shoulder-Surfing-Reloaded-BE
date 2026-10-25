@@ -1,0 +1,13 @@
+{
+  "version": 3,
+  "configurePresets": [
+    { "name": "msvc-x64", "generator": "Visual Studio 17 2022", "architecture": "x64", "binaryDir": "${sourceDir}/build/msvc" },
+    { "name": "mingw", "generator": "Unix Makefiles", "binaryDir": "${sourceDir}/build/mingw",
+      "toolchainFile": "${sourceDir}/cmake/mingw-w64-x86_64.cmake",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "BUILD_TESTING": "OFF" } }
+  ],
+  "buildPresets": [
+    { "name": "msvc-x64", "configurePreset": "msvc-x64", "configuration": "Release" },
+    { "name": "mingw", "configurePreset": "mingw" }
+  ]
+}

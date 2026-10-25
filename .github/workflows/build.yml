@@ -1,0 +1,70 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/Release/ShoulderSurfing.dll, build/Release/Injector.exe, README.md dist/
+          Copy-Item docs dist/docs -Recurse
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShoulderSurfing-BE-msvc-x64
+          path: dist/
+
+  mingw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64 cmake
+      - name: Unit tests (native)
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Isrc tests/CameraMathTests.cpp src/client/modules/camera/CameraMath.cpp -o camera_tests && ./camera_tests
+          g++ -std=c++17 -Wall -Wextra -Isrc tests/SettingsTests.cpp src/client/config/Settings.cpp -o settings_tests && ./settings_tests
+      - name: Cross-compile
+        run: |
+          cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-x86_64.cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build build --parallel
+      - name: Package
+        run: |
+          mkdir dist
+          cp build/ShoulderSurfing.dll build/Injector.exe README.md dist/
+          cp -r docs dist/docs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShoulderSurfing-BE-mingw-x64
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [msvc, mingw]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ShoulderSurfing-BE-msvc-x64
+          path: dist
+      - run: cd dist && zip -r ../ShoulderSurfing-BE-${{ github.ref_name }}.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ShoulderSurfing-BE-${{ github.ref_name }}.zip

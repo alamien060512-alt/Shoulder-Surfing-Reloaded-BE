@@ -45,7 +45,7 @@ add_library(ShoulderSurfing SHARED
     src/client/modules/camera/ViewSettings.cpp
 )
 target_include_directories(ShoulderSurfing PRIVATE "${SHOULDER_SOURCE_DIR}")
-target_link_libraries(ShoulderSurfing PRIVATE shoulder_core shoulder_minhook)
+target_link_libraries(ShoulderSurfing PRIVATE shoulder_core shoulder_minhook version)
 set_target_properties(ShoulderSurfing PROPERTIES OUTPUT_NAME "shoulder-surfing-reloaded" PREFIX "")
 
 if(MSVC)

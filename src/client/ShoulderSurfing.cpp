@@ -16,6 +16,8 @@
 #include <sstream>
 #include <string>
 
+#include <cstdio>
+
 namespace {
 HMODULE gModule = nullptr;
 std::atomic<bool> gUnloadRequested{false};
@@ -51,6 +53,23 @@ void WriteFile(const std::wstring& path, const std::string& text) {
     out << text;
 }
 
+std::string GameVersion() {
+    wchar_t path[MAX_PATH] = {};
+    if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) return "unknown";
+    DWORD handle = 0;
+    const DWORD size = GetFileVersionInfoSizeW(path, &handle);
+    if (!size) return "unknown";
+    std::string buffer(size, '\0');
+    VS_FIXEDFILEINFO* info = nullptr;
+    UINT length = 0;
+    if (!GetFileVersionInfoW(path, handle, size, buffer.data()) ||
+        !VerQueryValueW(buffer.data(), L"\\", reinterpret_cast<void**>(&info), &length) || !info) return "unknown";
+    char out[64];
+    snprintf(out, sizeof(out), "%u.%u.%u.%u", HIWORD(info->dwFileVersionMS), LOWORD(info->dwFileVersionMS),
+             HIWORD(info->dwFileVersionLS), LOWORD(info->dwFileVersionLS));
+    return out;
+}
+
 bool GameFocused() {
     DWORD pid = 0;
     GetWindowThreadProcessId(GetForegroundWindow(), &pid);
@@ -70,7 +89,7 @@ struct KeyEdge {
 
 DWORD WINAPI Worker(LPVOID) {
     using namespace shoulder;
-    LogF("Shoulder Surfing Reloaded (BE) starting");
+    LogF("Shoulder Surfing Reloaded (BE) starting; Minecraft %s (built-in profile: 1.26.52.3)", GameVersion().c_str());
 
     if (MH_Initialize() != MH_OK) {
         LogF("MinHook init failed");

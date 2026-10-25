@@ -11,10 +11,10 @@ Works like [vibrant-visuals-patcher](https://github.com/th4llium/vibrant-visuals
 
 1. Install ModLoader. Easiest: run `VibrantVisualPatcherInstaller.exe` from the vibrant-visuals-patcher releases once (it installs ModLoader), or install ModLoader by hand.
 2. Download `shoulder-surfing-reloaded.dll` from this repo's Actions run / Releases.
-3. Copy it to **both** mods folders, same as the patcher:
+3. Copy the `.dll` itself (not the downloaded .zip, not inside a subfolder) to the mods folder ModLoader reads, `%APPDATA%\Minecraft Bedrock\mods` (`Minecraft Bedrock Preview\mods` for Preview). Copying to the game's own `mods` folder as well is harmless:
    - `%APPDATA%\Minecraft Bedrock\mods`
    - the game's `mods` folder (e.g. `C:\XboxGames\Minecraft for Windows\Content\mods` or `C:\Program Files\WindowsApps\Microsoft.MinecraftUWP_...\mods`)
-4. Start Minecraft (1.26.52.3), join a world, switch to **back third person**.
+4. Start Minecraft. ModLoader's debug console must list `Loading plugin: shoulder-surfing-reloaded.dll`, followed by `[shoulder-surfing-reloaded] ... starting; Minecraft <version>`. Join a world (built-in profile: 1.26.52.3), join a world, switch to **back third person**.
 
 It should coexist with vibrant-visuals-patcher and BetterRenderDragon (it only hooks the world camera render call).
 

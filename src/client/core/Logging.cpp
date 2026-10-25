@@ -15,6 +15,16 @@ void LogF(const char* format, ...) {
     vsnprintf(message, sizeof(message), format, args);
     va_end(args);
 
+    // ModLoader's "Debug Console" is the process console; mirror there like other mods do.
+    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode = 0;
+    if (console && console != INVALID_HANDLE_VALUE && GetConsoleMode(console, &mode)) {
+        char text[1100];
+        const int n = snprintf(text, sizeof(text), "[INFO] [shoulder-surfing-reloaded] %s\n", message);
+        DWORD wrote = 0;
+        if (n > 0) WriteConsoleA(console, text, static_cast<DWORD>(n), &wrote, nullptr);
+    }
+
     OutputDebugStringA("[ShoulderSurfing] ");
     OutputDebugStringA(message);
     OutputDebugStringA("\n");
